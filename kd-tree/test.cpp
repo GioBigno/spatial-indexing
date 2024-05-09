@@ -23,15 +23,19 @@ int main(){
 	
 	import_points("p1.txt", points);
 
-	std::cout<<"points:"<<std::endl;
+	std::cout<<"[POINTS]"<<std::endl;
 	for(bigno::Point p : points){
 		std::cout<<p.toString()<<std::endl;
 	}
 
+	std::cout<<"[CREATION]"<<std::endl;
 	bigno::KdTree tree(dimensions, points);
 
-	std::vector<double> p1 = {3.5, 12};
-	tree.query_neighbors(bigno::Point(p1, new std::string("START")), 1);
+	std::vector<double> v1 = {3.5, 12};
+	bigno::Point p1(v1, new std::string("START"));
+	std::cout<<"[QUERY]"<<std::endl;
+	std::cout<<"Point: "<<p1.toString()<<std::endl;
+	tree.query_neighbors(p1, 1);
 
 	return 0;
 }
