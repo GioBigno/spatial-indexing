@@ -3,6 +3,7 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <memory>
 
 namespace bigno{
 
@@ -77,11 +78,11 @@ class KdTree{
 		
 		std::vector<Point> query_neighbors(const Point start, const std::size_t numNeighbors) const {
 
-			if(this->root == nullptr){
+			if(this->root.get() == nullptr){
 				return {};
 			}
 
-			Node* targetLeaf = this->root;
+			Node* targetLeaf = this->root.get();
 			bool finished = false;
 
 			while(targetLeaf != nullptr && !finished){
@@ -92,13 +93,13 @@ class KdTree{
 
 				if(cmp < 0){
 					if(targetLeaf->left != nullptr){
-						targetLeaf = targetLeaf->left;
+						targetLeaf = targetLeaf->left.get();
 					}else{
 						finished = true;
 					}
 				}else if(cmp > 0){
 					if(targetLeaf->right != nullptr){
-						targetLeaf = targetLeaf->right;
+						targetLeaf = targetLeaf->right.get();
 					}else{
 						finished = true;
 					}
@@ -116,8 +117,8 @@ class KdTree{
 		struct Node{
 			Point point;
 			std::size_t dimension;
-			Node* left = nullptr;
-			Node* right = nullptr;
+			std::unique_ptr<Node> left;
+			std::unique_ptr<Node> right;
 
 			Node(const Point point, const std::size_t dimension){
 				this->point = point;
@@ -125,12 +126,12 @@ class KdTree{
 			}
 
 			bool isLeaf(){
-				return this->left == nullptr && this->right == nullptr;
+				return (this->left).get() == nullptr && (this->right).get() == nullptr;
 			}
 
 		};
 
-		void insert(Node*& node, std::vector<Point>::iterator begin, std::vector<Point>::iterator end, const std::size_t dimension){
+		void insert(std::unique_ptr<Node>& node, std::vector<Point>::iterator begin, std::vector<Point>::iterator end, const std::size_t dimension){
 			
 			const std::size_t size = end-begin;
 
@@ -150,14 +151,14 @@ class KdTree{
 			//	std::cout<<(*i).toString()<<std::endl;
 			//}
 
-			node = new Node(p, dimension);
+			node = std::make_unique<Node>(p, dimension);
 			
-			insert(node->left, begin, (begin + (size/2)), (dimension+1)%(this->dimensions));
-			insert(node->right, (begin + (size/2))+1, end, (dimension+1)%(this->dimensions));
+			insert((node.get())->left, begin, (begin + (size/2)), (dimension+1)%(this->dimensions));
+			insert((node.get())->right, (begin + (size/2))+1, end, (dimension+1)%(this->dimensions));
 		}
 		
 		std::size_t dimensions;
-		Node* root = nullptr;
+		std::unique_ptr<Node> root;
 };
 
 }
