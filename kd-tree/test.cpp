@@ -28,14 +28,24 @@ int main(){
 		std::cout<<p.toString()<<std::endl;
 	}
 
+	//KTREE
+
 	std::cout<<"[CREATION]"<<std::endl;
 	bigno::KdTree tree(dimensions, points);
 
-	std::vector<double> v1 = {3.5, 12};
-	bigno::Point p1(v1, new std::string("START"));
-	std::cout<<"[QUERY]"<<std::endl;
+	bigno::Point p1({1, 9}, new std::string("START"));
+	
+	std::cout<<"[TREE QUERY]"<<std::endl;
 	std::cout<<"Point: "<<p1.toString()<<std::endl;
-	tree.query_neighbors(p1, 1);
+	bigno::Point neighbor = tree.query_neighbor(p1);
+	std::cout<<"Neighbor: "<<neighbor.toString()<<std::endl;
+
+	//LINEAR SEARCH
+
+	std::cout<<"[LINEAR SEARCH]"<<std::endl;
+	for(bigno::Point p : points){
+		std::cout<<"distance from "<<p.toString()<<" = "<<p1.distance(p)<<std::endl;
+	}
 
 	return 0;
 }

@@ -1,11 +1,10 @@
 #include <iostream>
+#include <utility>
 #include <vector>
-#include <queue>
 #include <limits>
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include <functional>
 
 namespace bigno{
 
@@ -15,8 +14,8 @@ class Point{
 		Point(){
 			this->coordinates = {};
 		}
-
-		Point(std::vector<double>& v, void* data = nullptr){
+		
+		Point(std::vector<double> v, void* data = nullptr){
 			this->coordinates = v;
 			this->setData(data);
 		}
@@ -54,7 +53,7 @@ class Point{
 		double distance(const Point& p) const {
 			
 			std::size_t dimensions = std::min(this->coordinates.size(), p.coordinates.size());
-			uint64_t sum = 0;
+			double sum = 0;
 
 			for(std::size_t i=0; i<dimensions; i++){
 				sum += std::pow(this->coordinates[i] - p.coordinates[i], 2);
@@ -63,7 +62,7 @@ class Point{
 			return std::sqrt(sum);
 		}
 
-		std::string toString(){
+		std::string toString() const {
 			std::string ret = this->getDataString();
 			ret += "(";
 			for(std::size_t i=0; i<this->coordinates.size(); i++){
@@ -89,55 +88,12 @@ class KdTree{
 			this->dimensions = dimensions;
 			insert(this->root, points.begin(), points.end(), 0);
 		}
-		
-		std::vector<Point> query_neighbors(const Point start, const std::size_t numNeighbors) const {
-
-			if(this->root.get() == nullptr){
-				return {};
-			}
-
-			Node* targetLeaf = this->root.get();
-			bool finished = false;
-
-			while(targetLeaf != nullptr && !finished){
-
-				std::cout<<"current target: "<<targetLeaf->point.getDataString()<<std::endl;
-
-				int cmp = start.cmp(targetLeaf->point, targetLeaf->dimension);
-
-				if(cmp < 0){
-					if(targetLeaf->left != nullptr){
-						targetLeaf = targetLeaf->left.get();
-					}else{
-						finished = true;
-					}
-				}else if(cmp > 0){
-					if(targetLeaf->right != nullptr){
-						targetLeaf = targetLeaf->right.get();
-					}else{
-						finished = true;
-					}
-				}
-			}
-
-			auto compare = [](const std::pair<double, Point>& a, const std::pair<double, Point>& b){return a.first < b.first;};
-
-			std::priority_queue<std::pair<double, Point>, std::vector<std::pair<double, Point>>, decltype(compare)> pointsFounded{compare};
-			
-			pointsFounded.push({start.distance(targetLeaf->point), targetLeaf->point});
-
-			std::cout<<"targetLeaf: "<<targetLeaf->point.toString()<<std::endl;
-
-
-
-
-
-
-
-
-			//temp
-			return {};
+	
+		Point query_neighbor(const Point& target) const {
+			Point a;
+			return this->query(target, this->root, {-1, a}).second;
 		}
+		
 
 	private:
 
@@ -171,19 +127,76 @@ class KdTree{
 												   });
 			
 			Point p = *(begin + (size/2));
+			
+#ifdef DEBUG_TREE
 			std::cout<<"[insert] new node split "<<dimension<<" dimension, point="<<p.toString()<<std::endl;
-
-			//std::cout<<"based on: "<<std::endl;
-			//for(auto i = begin; i != end; i++){
-			//	std::cout<<(*i).toString()<<std::endl;
-			//}
-
+#endif
 			node = std::make_unique<Node>(p, dimension);
 			
 			insert((node.get())->left, begin, (begin + (size/2)), (dimension+1)%(this->dimensions));
 			insert((node.get())->right, (begin + (size/2))+1, end, (dimension+1)%(this->dimensions));
 		}
 		
+		std::pair<double, Point> query(const Point& target, const std::unique_ptr<Node>& node, std::pair<double, Point> currBest) const {
+
+			bool isLeaf = false;
+			int cmp = target.cmp(node.get()->point, node.get()->dimension);
+
+			if(cmp < 0){
+				if(node.get()->left != nullptr){
+					std::pair<double, Point> temp = this->query(target, node.get()->left, currBest);
+					if(temp.first < currBest.first || currBest.first == -1){
+						currBest = temp;
+					}
+				}else{
+					isLeaf = true;
+				}
+			}else if(cmp >= 0){
+				if(node.get()->right != nullptr){
+					std::pair<double, Point> temp = this->query(target, node.get()->right, currBest);
+					if(temp.first < currBest.first || currBest.first == -1){
+						currBest = temp;
+					}
+				}else{
+					isLeaf = true;
+				}
+			}
+
+			if(isLeaf){
+				double distance = target.distance(node.get()->point);
+				if(currBest.first == -1 || distance < currBest.first){
+					return std::make_pair(distance, node.get()->point);
+				}
+				return currBest;
+			}
+
+			if(fabs(target.getCoordinate(node.get()->dimension) - node.get()->point.getCoordinate(node.get()->dimension)) < currBest.first){
+				
+				double distanceFromMe = target.distance(node.get()->point);
+				if(distanceFromMe < currBest.first){
+					currBest = std::make_pair(distanceFromMe, node.get()->point);
+				}
+
+				if(cmp < 0){
+					if(node.get()->right != nullptr){
+						std::pair<double, Point> temp = this->query(target, node.get()->right, currBest);
+						if(temp.first < currBest.first){
+							currBest = temp;
+						}
+					}
+				}else if(cmp > 0){
+					if(node.get()->left != nullptr){
+						std::pair<double, Point> temp = this->query(target, node.get()->left, currBest);
+						if(temp.first < currBest.first){
+							currBest = temp;
+						}
+					}
+				}
+			}
+
+			return currBest;
+		}
+
 		std::size_t dimensions;
 		std::unique_ptr<Node> root;
 };
