@@ -19,6 +19,14 @@ class Rect{
 		this->topRight = topRight;
 	}
 
+	Point getBottomLeft(){
+		return this->bottomLeft;
+	}
+
+	Point getTopRight(){
+		return this->topRight;
+	}
+
 	bool contains(const Point& p) const {
 		return p.getX() > this->bottomLeft.getX() && 
 			   p.getX() < this->topRight.getX() &&
