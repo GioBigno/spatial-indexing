@@ -28,10 +28,10 @@ class Rect{
 	}
 
 	bool contains(const Point& p) const {
-		return p.getX() > this->bottomLeft.getX() && 
-			   p.getX() < this->topRight.getX() &&
-			   p.getY() > this->bottomLeft.getY() &&
-			   p.getY() < this->topRight.getY();
+		return p.getX() >= this->bottomLeft.getX() && 
+			   p.getX() <= this->topRight.getX() &&
+			   p.getY() >= this->bottomLeft.getY() &&
+			   p.getY() <= this->topRight.getY();
 	}
 
 	bool contains(const Rect& r) const {
