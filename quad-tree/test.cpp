@@ -3,13 +3,14 @@
 #include <sstream>
 #include <vector>
 #include <random>
+#include <chrono>
 #include "quad-tree.hpp"
 
-const std::size_t numPoints = 12;
+const std::size_t numPoints = 60000;
 const std::size_t dimensions = 2;
 const double coordinateMin = 0;
-const double coordinateMax = 15;
-const size_t nodeMaxPoints = 3;
+const double coordinateMax = 200;
+const size_t nodeMaxPoints = 300;
 
 bool generate_points(std::vector<bigno::Point>& points);
 bool import_points(const std::string fileName, std::vector<bigno::Point>& points);
@@ -19,41 +20,55 @@ int main(){
 	
 	std::vector<bigno::Point> points;
 
-	//generate_points(points);
-	//export_points("p1.txt", points);
+	generate_points(points);
+	export_points("p2.txt", points);
 	
-	import_points("p1.txt", points);
+	//import_points("p1.txt", points);
 
-	std::cout<<"[POINTS]"<<std::endl;
+	std::cout << "[POINTS]"<<std::endl;
 	for(bigno::Point p : points){
-		std::cout<<p.toString()<<std::endl;
+		std::cout << p.toString() << std::endl;
 	}
 
 	//QUAD TREE
 
-	std::cout<<"[CREATION]"<<std::endl;
+	std::cout << "[CREATION]" << std::endl;
 	bigno::QuadTree tree(bigno::Rect(bigno::Point({coordinateMin, coordinateMin}), bigno::Point({coordinateMax, coordinateMax})), nodeMaxPoints);
 
 	for(bigno::Point p : points){
 		tree.insert(p);
 	}
 	
-	/*
-	bigno::Point p1({1, 9}, new std::string("START"));
+	bigno::Rect r1(bigno::Point({40, 60}), bigno::Point({120.5, 100}));
 	
-	std::cout<<"[TREE QUERY]"<<std::endl;
-	std::cout<<"Point: "<<p1.toString()<<std::endl;
-	bigno::Point neighbor = tree.query_neighbor(p1);
-	std::cout<<"Neighbor: "<<neighbor.toString()<<std::endl;
+	std::cout << "[QUERY]" << std::endl;
+	std::cout << "searching points in envelope: " << r1.getBottomLeft().toString() << ", " << r1.getTopRight().toString() << std::endl;
+	
+
+	const auto start = std::chrono::steady_clock::now();
+
+	std::vector<bigno::Point> res = tree.query_envelope(r1);
+
+	const auto end = std::chrono::steady_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+	
+	std::cout << "quad-tree found " << res.size() << " points in " << elapsed.count() << " seconds" << std::endl;
 
 	//LINEAR SEARCH
 
-	std::cout<<"[LINEAR SEARCH]"<<std::endl;
-	for(bigno::Point p : points){
-		std::cout<<"distance from "<<p.toString()<<" = "<<p1.distance(p)<<std::endl;
-	}
+	const auto start2 = std::chrono::steady_clock::now();
 
-	*/
+	std::size_t count = 0;
+	for(bigno::Point p : points){
+		if(r1.contains(p)){
+			count++;
+		}
+	}
+	
+	const auto end2 = std::chrono::steady_clock::now();
+	std::chrono::duration<double> elapsed2 = end2 - start2;
+	
+	std::cout << "linear-search found " << count << " points in " << elapsed2.count() << " seconds" << std::endl;
 
 	return 0;
 }

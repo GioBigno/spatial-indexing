@@ -1,14 +1,12 @@
 #include <vector>
 #include <memory>
+#include <algorithm>
 #include "../utils/point.hpp"
 #include "../utils/rect.hpp"
-
-#include <iostream>
 
 namespace bigno{
 
 class QuadTree{
-
 
 	public:
 
@@ -19,7 +17,6 @@ class QuadTree{
 
 		bool insert(const Point &p){
 			
-			
 			if(this->root.get() == nullptr){
 				return false;
 			}
@@ -27,8 +24,9 @@ class QuadTree{
 			return this->insert(this->root, p);
 		}
 
-		void debug(){
-			this->debug(this->root);
+		std::vector<Point> query_envelope(const Rect& envelope){
+			
+			return this->query_envelope(this->root, envelope);
 		}
 
 	private:
@@ -43,25 +41,10 @@ class QuadTree{
 				this->area = area;
 			}
 
-			bool isLeaf(){
+			bool isLeaf() const {
 				return childNodes.empty();
 			}
 		};
-
-		void debug(std::unique_ptr<Node>& node){
-
-			std::cout<<"node: "<< node.get()->area.getBottomLeft().toString() << ", " << node.get()->area.getTopRight().toString() <<std::endl;
-			std::cout<<"points: "<<std::endl;
-			for(Point p : node.get()->points){
-				std::cout<<p.toString()<<" ";
-			}
-			std::cout<<std::endl;
-			std::cout<<"childs: "<<node.get()->childNodes.size()<<std::endl;
-
-			for(std::unique_ptr<Node>& n : node.get()->childNodes){
-				this->debug(n);
-			}
-		}
 
 		bool insert(std::unique_ptr<Node>& node, const Point& p){
 		
@@ -114,9 +97,28 @@ class QuadTree{
 			}
 		}
 
+		std::vector<Point> query_envelope(std::unique_ptr<Node>& node, const Rect& envelope) const {
+		
+			if(!node.get()->area.intersects(envelope)){
+				return {};
+			}
+
+			std::vector<Point> res;
+
+			if(node.get()->isLeaf()){
+				std::copy_if(node.get()->points.begin(), node.get()->points.end(), std::back_inserter(res), [envelope](const Point& p){return envelope.contains(p);});
+			}else{
+				for(std::unique_ptr<Node>& child : node.get()->childNodes){
+					std::vector<Point> childResult = this->query_envelope(child, envelope);
+					res.insert(res.end(), childResult.begin(), childResult.end());
+				}
+			}
+
+			return res;
+		}
+
 		std::size_t MAX_POINTS;
 		std::unique_ptr<Node> root = nullptr;
-
 };
 
 }
