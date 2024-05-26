@@ -1,12 +1,12 @@
-#include <iostream>
+#ifndef KDTREE_HPP
+#define KDTREE_HPP
+
 #include <utility>
 #include <vector>
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include "../utils/point.hpp"
-
-//#define DEBUG_TREE
+#include "../utils/headers/point.hpp"
 
 namespace bigno{
 
@@ -57,23 +57,20 @@ class KdTree{
 			
 			Point p = *(begin + (size/2));
 			
-#ifdef DEBUG_TREE
-			std::cout<<"[insert] new node split "<<dimension<<" dimension, point="<<p.toString()<<std::endl;
-#endif
 			node = std::make_unique<Node>(p, dimension);
 			
-			insert((node.get())->left, begin, (begin + (size/2)), (dimension+1)%(this->dimensions));
-			insert((node.get())->right, (begin + (size/2))+1, end, (dimension+1)%(this->dimensions));
+			insert(node->left, begin, (begin + (size/2)), (dimension+1)%(this->dimensions));
+			insert(node->right, (begin + (size/2))+1, end, (dimension+1)%(this->dimensions));
 		}
 		
 		std::pair<double, Point> query(const Point& target, const std::unique_ptr<Node>& node, std::pair<double, Point> currBest) const {
 
 			bool isLeaf = false;
-			int cmp = target.cmp(node.get()->point, node.get()->dimension);
+			int cmp = target.cmp(node->point, node->dimension);
 
 			if(cmp < 0){
-				if(node.get()->left != nullptr){
-					std::pair<double, Point> temp = this->query(target, node.get()->left, currBest);
+				if(node->left != nullptr){
+					std::pair<double, Point> temp = this->query(target, node->left, currBest);
 					if(temp.first < currBest.first || currBest.first == -1){
 						currBest = temp;
 					}
@@ -81,8 +78,8 @@ class KdTree{
 					isLeaf = true;
 				}
 			}else if(cmp >= 0){
-				if(node.get()->right != nullptr){
-					std::pair<double, Point> temp = this->query(target, node.get()->right, currBest);
+				if(node->right != nullptr){
+					std::pair<double, Point> temp = this->query(target, node->right, currBest);
 					if(temp.first < currBest.first || currBest.first == -1){
 						currBest = temp;
 					}
@@ -92,30 +89,30 @@ class KdTree{
 			}
 
 			if(isLeaf){
-				double distance = target.distance(node.get()->point);
+				double distance = target.distance(node->point);
 				if(currBest.first == -1 || distance < currBest.first){
-					return std::make_pair(distance, node.get()->point);
+					return std::make_pair(distance, node->point);
 				}
 				return currBest;
 			}
 
-			if(fabs(target.getCoordinate(node.get()->dimension) - node.get()->point.getCoordinate(node.get()->dimension)) < currBest.first){
+			if(fabs(target.getCoordinate(node->dimension) - node->point.getCoordinate(node->dimension)) < currBest.first){
 				
-				double distanceFromMe = target.distance(node.get()->point);
+				double distanceFromMe = target.distance(node->point);
 				if(distanceFromMe < currBest.first){
-					currBest = std::make_pair(distanceFromMe, node.get()->point);
+					currBest = std::make_pair(distanceFromMe, node->point);
 				}
 
 				if(cmp < 0){
-					if(node.get()->right != nullptr){
-						std::pair<double, Point> temp = this->query(target, node.get()->right, currBest);
+					if(node->right != nullptr){
+						std::pair<double, Point> temp = this->query(target, node->right, currBest);
 						if(temp.first < currBest.first){
 							currBest = temp;
 						}
 					}
 				}else if(cmp > 0){
-					if(node.get()->left != nullptr){
-						std::pair<double, Point> temp = this->query(target, node.get()->left, currBest);
+					if(node->left != nullptr){
+						std::pair<double, Point> temp = this->query(target, node->left, currBest);
 						if(temp.first < currBest.first){
 							currBest = temp;
 						}
@@ -131,3 +128,5 @@ class KdTree{
 };
 
 }
+
+#endif //KDTREE_HPP

@@ -47,7 +47,7 @@ int main(){
 
 	const auto start = std::chrono::steady_clock::now();
 
-	std::vector<bigno::Point> res = tree.query_envelope(r1);
+	std::vector<bigno::Point> res = tree.query(r1);
 
 	const auto end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
