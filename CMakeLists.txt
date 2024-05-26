@@ -4,6 +4,7 @@ project(giorgio VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 set(GEOS_PATH "/home/giorgio/dev/lib/bin/geos/" CACHE PATH "Path of geos library package")
 set(SHAPELIB_PATH "/home/giorgio/dev/lib/bin/shapelib/" CACHE PATH "Path of shapelib library package")
@@ -22,3 +23,11 @@ target_link_libraries(giorgio
 )
 
 target_include_directories(giorgio PRIVATE ${GEOS_INCLUDE_DIRS} utils)
+
+# Move compile_commands.json to the project root
+add_custom_command(
+    TARGET giorgio POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+    ${CMAKE_SOURCE_DIR}/compile_commands.json
+)
