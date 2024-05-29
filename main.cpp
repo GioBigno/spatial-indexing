@@ -1,24 +1,26 @@
+#include <geom/Coordinate.h>
 #include <geos/geom/Point.h>
 #include <geos/geom/GeometryFactory.h>
+#include <geos/index/kdtree/KdTree.h>
+#include <geos/index/quadtree/Quadtree.h>
+#include <geos/index/strtree/STRtree.h>
 #include <cli/cli.h>
 #include <cli/clilocalsession.h>
 #include <cli/filehistorystorage.h>
 #include <cli/loopscheduler.h>
 #include <iostream>
 #include <memory>
-#include "headers/point.hpp"
-#include "kd-tree/kd-tree.hpp"
-#include "quad-tree/quad-tree.hpp"
+#include <limits>
 #include "utils/headers/shpreader.h"
 
 std::vector<std::shared_ptr<geos::geom::Geometry>> geometries;
 
-std::unique_ptr<bigno::KdTree> kdTree = nullptr;
-std::unique_ptr<bigno::QuadTree> quadTree = nullptr;
-
-bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos::geom::Geometry>>& geometries);
+std::unique_ptr<geos::index::kdtree::KdTree> kdTree;
+std::unique_ptr<geos::index::quadtree::Quadtree> quadTree;
+std::unique_ptr<geos::index::strtree::STRtree> rTree;
 
 void cmd_build(std::ostream& out, const std::string& type, const std::string& inputFile);
+bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos::geom::Geometry>>& geometries);
 
 int main() {
 
@@ -59,21 +61,36 @@ int main() {
 
 bool buildKdTree(std::ostream& out){
 
-	std::vector<bigno::Point> points;
-	
+	kdTree = std::make_unique<geos::index::kdtree::KdTree>(std::numeric_limits<double>::epsilon());
+
 	for(const std::shared_ptr<geos::geom::Geometry>& geom : geometries){
 		if(geom->getGeometryTypeId() != geos::geom::GEOS_POINT){
 			out<<"Error: in kd-tree all geometries must be points"<<std::endl;
 			return false; 
 		}
-		std::shared_ptr<geos::geom::Point> point = std::static_pointer_cast<geos::geom::Point>(geom); 
-		bigno::Point p({point->getX(), point->getY()}, nullptr);
-		points.push_back(p);
+		geos::geom::Coordinate coord(*std::static_pointer_cast<geos::geom::Point>(geom)->getCoordinate());
+		kdTree->insert(coord, geom.get());
 	}
 
-	kdTree = std::make_unique<bigno::KdTree>(2, points);
-
 	return true;
+}
+
+void buildQuadTree(std::ostream& out){
+
+	quadTree = std::make_unique<geos::index::quadtree::Quadtree>();
+
+	for(const std::shared_ptr<geos::geom::Geometry>& geom : geometries){
+		quadTree->insert(geom->getEnvelopeInternal(), geom.get());
+	}
+}
+
+void buildRTree(std::ostream& out){
+
+	rTree = std::make_unique<geos::index::strtree::STRtree>();
+
+	for(const std::shared_ptr<geos::geom::Geometry>& geom : geometries){
+		quadTree->insert(geom->getEnvelopeInternal(), geom.get());
+	}
 }
 
 void cmd_build(std::ostream& out, const std::string& type, const std::string& inputFile){
@@ -84,33 +101,41 @@ void cmd_build(std::ostream& out, const std::string& type, const std::string& in
 
 	//build the data structure
 
-	double time = 0;
-
-
+	std::chrono::duration<double> duration;
+	
 	if(type == "kd-tree"){
 
 		const auto start = std::chrono::steady_clock::now();
 		bool buildSuccess = buildKdTree(out);
 		const auto end = std::chrono::steady_clock::now();
-		std::chrono::duration<double> elapsed = end - start;
-		time = elapsed.count();
+		duration = end - start;
 
 		if(!buildSuccess){
 			return;
 		}
 
 	}else if(type == "quad-tree"){
-		//TODO
+		
+		const auto start = std::chrono::steady_clock::now();
+		buildQuadTree(out);
+		const auto end = std::chrono::steady_clock::now();
+		duration = end - start;
+
 	}else if(type == "r-tree"){
-		//TODO
+		
+		const auto start = std::chrono::steady_clock::now();
+		buildRTree(out);
+		const auto end = std::chrono::steady_clock::now();
+		duration = end - start;
+
 	}else{
 		out<<"Error: Invalid data structure type '"<<type<<"'"<<std::endl;
 		return;
 	}
 
 	out<<type<<" built successfully"<<std::endl
-	<<"time: "<<time<<" seconds"<<std::endl
-	<<"points: "<<geometries.size()<<std::endl;
+	<<"time: "<<(duration.count()*1000)<<" milli-seconds"<<std::endl
+	<<"geometries: "<<geometries.size()<<std::endl;
 
 }
 
@@ -122,7 +147,7 @@ bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos
     bpp::ShpReader reader;
 	std::string openError;
     reader.setFile(fileName);
-    bool retval = reader.open(true, false, openError);
+    bool retval = reader.open(true, true, openError);
 
 	if(!retval){
 		return false;

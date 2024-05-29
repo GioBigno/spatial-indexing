@@ -28,8 +28,13 @@ class QuadTree{
 			return this->insert(this->root, p);
 		}
 
-		bool insert(){
+		bool insert(const Rect &r){
 		
+			if(this->root.get() == nullptr){
+				return false;
+			}
+
+			return this->insert(this->root, r);
 		}
 
 		std::vector<Point> query(const Rect& envelope){
@@ -103,6 +108,11 @@ class QuadTree{
 
 				return false;
 			}
+		}
+
+		bool insert(std::unique_ptr<Node>& node, const Rect& r){
+
+
 		}
 
 		std::vector<Point> query(std::unique_ptr<Node>& node, const Rect& envelope) const {

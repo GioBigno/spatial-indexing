@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+//#define HAVE_GDAL
+
 #ifdef HAVE_GDAL
 #include "ogr_spatialref.h"
 #endif

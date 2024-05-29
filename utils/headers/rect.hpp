@@ -14,9 +14,10 @@ class Rect{
 		this->topRight = Point({0, 0});
 	}
 
-	Rect(const Point bottomLeft, const Point topRight){
+	Rect(const Point bottomLeft, const Point topRight, void* data = nullptr){
 		this->bottomLeft = bottomLeft;
 		this->topRight = topRight;
+		this->setData(data);
 	}
 
 	Point getBottomLeft(){
@@ -25,6 +26,18 @@ class Rect{
 
 	Point getTopRight(){
 		return this->topRight;
+	}
+
+	void* getData() const {
+		return this->data;
+	}
+
+	std::string getDataString() const {
+		return this->data == nullptr ? "" : *(static_cast<std::string*>(this->getData()));
+	}
+
+	void setData(void* data){
+		this->data = data;
 	}
 
 	bool contains(const Point& p) const {
@@ -53,6 +66,7 @@ class Rect{
 
 	Point bottomLeft;
 	Point topRight;
+	void* data;
 };
 
 }
