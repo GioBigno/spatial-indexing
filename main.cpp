@@ -89,7 +89,7 @@ void buildRTree(std::ostream& out){
 	rTree = std::make_unique<geos::index::strtree::STRtree>();
 
 	for(const std::shared_ptr<geos::geom::Geometry>& geom : geometries){
-		quadTree->insert(geom->getEnvelopeInternal(), geom.get());
+		rTree->insert(geom->getEnvelopeInternal(), geom.get());
 	}
 }
 
@@ -153,6 +153,8 @@ bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos
 		return false;
 	}
 
+	geos::geom::Geometry* geomRead;
+
     while(reader.next()){
 
         std::unique_ptr<geos::geom::Geometry> currentGeom(nullptr);
@@ -160,17 +162,29 @@ bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos
         switch(reader.getGeomType()){
 
         case bpp::gPoint:
-            currentGeom = std::move(reader.readPoint()->clone());
+			geomRead = reader.readPoint();
+			if(geomRead){
+            	currentGeom = std::move(geomRead->clone());
+			}
             break;
         case bpp::gMultiPoint:
-            currentGeom = std::move(reader.readMultiPoint()->clone());
+			geomRead = reader.readMultiPoint();
+			if(geomRead){
+            	currentGeom = std::move(geomRead->clone());
+			}
             break;
         case bpp::gLine:
-            currentGeom = std::move(reader.readLineString()->clone());
+			geomRead = reader.readLineString();
+			if(geomRead){
+            	currentGeom = std::move(geomRead->clone());
+			}
             break;
         case bpp::gPolygon:
-            currentGeom = std::move(reader.readMultiPolygon()->clone());
-            break;
+			geomRead = reader.readMultiPolygon();
+			if(geomRead){
+            	currentGeom = std::move(geomRead->clone());
+			}
+			break;
         case bpp::gUnknown:
 			std::cout << "[shpReader]: geometry unknow";
             break;
