@@ -126,14 +126,15 @@ void cmd_search_range(std::ostream& out, const std::string& type, const double x
 	geos::geom::Envelope envelope(x1, x2, y1, y2);
 	std::size_t numGeom = 0;
 
-	out<<"params:"<<std::endl;
-	
-	out<<std::endl;
-
 	std::chrono::duration<double, std::milli> duration;
 	const auto start = std::chrono::steady_clock::now();
 	
 	if(type == "kd-tree"){
+
+		if(!kdTree){
+			out<<type<<" not built yet"<<std::endl;
+			return;
+		}
 	
 		std::vector<geos::index::kdtree::KdNode*> result;
 		
@@ -147,6 +148,17 @@ void cmd_search_range(std::ostream& out, const std::string& type, const double x
 
 	}else if(type == "quad-tree"){
 		
+		if(!quadTree){
+			out<<type<<" not built yet"<<std::endl;
+			return;
+		}
+	
+		std::vector<void*> result;
+		
+		quadTree->query(&envelope, result);
+
+		numGeom = result.size();
+
 	}else if(type == "r-tree"){
 		
 	}else{
@@ -154,9 +166,9 @@ void cmd_search_range(std::ostream& out, const std::string& type, const double x
 		return;
 	}
 
-	out<<type<<" built successfully"<<std::endl
-	<<"time: "<<(duration.count())<<" milli-seconds"<<std::endl
-	<<"geometries: "<<numGeom<<std::endl;
+	out<<"found"<<std::endl
+	<<"geometries: "<<numGeom<<std::endl
+		<<"time: "<<(duration.count())<<" milli-seconds"<<std::endl;
 
 }
 
