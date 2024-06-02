@@ -23,6 +23,7 @@ std::unique_ptr<geos::index::kdtree::KdTree> kdTree;
 std::unique_ptr<geos::index::quadtree::Quadtree> quadTree;
 std::unique_ptr<geos::index::strtree::STRtree> rTree;
 
+void cmd_view(std::ostream& out, const std::string& shapefilePath);
 void cmd_load(std::ostream& out, const std::string& inputFile);
 void cmd_build(std::ostream& out, const std::string& type);
 void cmd_search_range_xy(std::ostream& out, const std::string& type, const double x1, const double y1, const double x2, const double y2);
@@ -34,6 +35,13 @@ bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos
 int main() {
 
 	auto rootMenu = std::make_unique<cli::Menu>("cli");
+    
+	rootMenu->Insert(
+        "view",
+		{"input"},
+		[](std::ostream& out, const std::string& shapefilePath){cmd_view(out, shapefilePath);},
+        "--input [file.shp]"
+        );
 
     rootMenu->Insert(
         "load",
@@ -137,6 +145,16 @@ geos::geom::Envelope create_random_envelope(const double x1, const double y1, co
 	return geos::geom::Envelope(random_x1, random_x2, random_y1, random_y2);
 }
 
+void cmd_view(std::ostream& out, const std::string& shapefilePath){
+
+	std::string command = "qgis \"" + shapefilePath + "\" 2>/dev/null";
+    int result = system(command.c_str());
+    
+    if (result != 0) {
+        out<<"Failed to open QGIS with shapefile: "<<shapefilePath<<std::endl;
+    }
+}
+
 void cmd_load(std::ostream& out, const std::string& inputFile){
 
 	if(!readShapeFile(inputFile, geometries)){
@@ -174,6 +192,7 @@ bool build(const std::string& type){
 		for(size_t i=0; i<geometries.size(); i++){
 			
 			if(geometries[i]->getGeometryTypeId() != geos::geom::GEOS_POINT){
+				kdTree.reset();
 				return false; 
 			}
 			geos::geom::Coordinate coord(*std::static_pointer_cast<geos::geom::Point>(geometries[i])->getCoordinate());
