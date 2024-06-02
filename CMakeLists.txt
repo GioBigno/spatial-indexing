@@ -18,7 +18,7 @@ find_package(GEOS REQUIRED 3.13.0)
 find_package(shapelib REQUIRED)
 find_package(cli REQUIRED)
 
-add_executable(giorgio main.cpp utils/src/shpformat.cpp utils/src/shpreader.cpp)
+add_executable(giorgio main.cpp utils/src/shpformat.cpp utils/src/shpreader.cpp utils/src/geohash.c)
 
 target_link_libraries(giorgio 
 	PRIVATE GEOS::geos 

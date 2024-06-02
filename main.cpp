@@ -16,12 +16,19 @@
 #include <limits>
 #include "utils/headers/shpreader.h"
 
+extern "C"{
+	#include "utils/headers/geohash.h"
+}
+
+const std::size_t geohashPrecision = 9;
+
 std::vector<std::shared_ptr<geos::geom::Geometry>> geometries;
 double minX, minY, maxX, maxY;
 
 std::unique_ptr<geos::index::kdtree::KdTree> kdTree;
 std::unique_ptr<geos::index::quadtree::Quadtree> quadTree;
 std::unique_ptr<geos::index::strtree::STRtree> rTree;
+std::vector<std::pair<std::string, std::size_t>> geohash;
 
 void cmd_view(std::ostream& out, const std::string& shapefilePath);
 void cmd_load(std::ostream& out, const std::string& inputFile);
@@ -54,21 +61,21 @@ int main() {
         "build",
 		{"type"},
 		[](std::ostream& out, const std::string& type){cmd_build(out, type);},
-        "--type [kd-tree|quad-tree|r-tree]"
+        "--type [kd-tree|quad-tree|r-tree|geohash]"
         );
 
 	rootMenu->Insert(
         "search_range",
 		{"type", "envelope"},
 		[](std::ostream& out, const std::string& type, const double x1, const double y1, const double x2, const double y2){cmd_search_range_xy(out, type, x1, y1, x2, y2);},
-        "--type [kd-tree|quad-tree|r-tree] --x1 --y1 --x2 --y2"
+        "--type [kd-tree|quad-tree|r-tree|geohash] --x1 --y1 --x2 --y2"
         );
     
 	rootMenu->Insert(
         "search_range",
 		{"type"},
 		[](std::ostream& out, const std::string& type){cmd_search_range_random(out, type);},
-        "--type [kd-tree|quad-tree|r-tree]"
+        "--type [kd-tree|quad-tree|r-tree|geohash]"
         );
 	
 	rootMenu->Insert(
@@ -121,8 +128,15 @@ std::string time_to_string(const double time){
 	return oss.str();
 }
 
+std::string commonPrefix(const std::string& str1, const std::string& str2) {
+    std::size_t minLength = std::min(str1.size(), str2.size());
+    std::size_t i = 0;
+    for(;i < minLength && str1[i] == str2[i]; i++);
+    return str1.substr(0, i);
+}
+
 bool isValidType(const std::string& type){
-	return (type == "kd-tree" ||type == "quad-tree" || type == "r-tree");
+	return (type == "kd-tree" ||type == "quad-tree" || type == "r-tree" || type == "geohash");
 }
 
 geos::geom::Envelope create_random_envelope(const double x1, const double y1, const double x2, const double y2){
@@ -140,7 +154,6 @@ geos::geom::Envelope create_random_envelope(const double x1, const double y1, co
 
 	std::uniform_real_distribution<double> dist4(random_y1, y2);
 	double random_y2 = dist4(rnd);
-
 
 	return geos::geom::Envelope(random_x1, random_x2, random_y1, random_y2);
 }
@@ -214,6 +227,22 @@ bool build(const std::string& type){
 		for(size_t i=0; i<geometries.size(); i++){
 			rTree->insert(geometries[i]->getEnvelopeInternal(), reinterpret_cast<void*>(i));
 		}
+	}else if(type == "geohash"){
+		
+		geohash.clear();
+
+		for(size_t i=0; i<geometries.size(); i++){
+			
+			if(geometries[i]->getGeometryTypeId() != geos::geom::GEOS_POINT){
+				geohash.clear();
+				return false; 
+			}
+			geos::geom::Coordinate coord(*std::static_pointer_cast<geos::geom::Point>(geometries[i])->getCoordinate());
+			geohash.push_back({geohash_encode(coord.y, coord.x, geohashPrecision), i});	
+		}
+
+		std::cout<<"geohash size: "<<geohash.size()<<std::endl;
+
 	}
 
 	return true;
@@ -288,6 +317,26 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 		for(const void* ptr : result){
 			geometriesFound.push_back(reinterpret_cast<std::size_t>(ptr));
 		}
+	}else if(type == "geohash"){
+		
+		if(geohash.empty()){
+			return false;
+		}
+
+		std::string hash1 = geohash_encode(envelope.getMinY(), envelope.getMinX(), geohashPrecision);
+		std::string hash2 = geohash_encode(envelope.getMaxY(), envelope.getMaxX(), geohashPrecision);
+
+		std::string hashPrefix = commonPrefix(hash1, hash2);
+
+		std::cout<<"hash1 = encode "<<envelope.getMinY()<<",  "<<envelope.getMinX()<<" = "<<hash1<<std::endl;
+		std::cout<<"hash2 = "<<hash2<<std::endl;
+		std::cout<<"hasPrefix: "<<hashPrefix<<std::endl;
+
+		for(const auto& elem : geohash){
+			if(elem.first.find(hashPrefix) == 0){
+				geometriesFound.push_back(elem.second);
+			}
+		}
 	}
 
 	return true;
@@ -357,6 +406,9 @@ void cmd_compare_xy(std::ostream& out, const double x1, const double y1, const d
 	if(rTree){
 		avaibleDataStructures.push_back("r-tree");	
 	}
+	if(!geohash.empty()){
+		avaibleDataStructures.push_back("geohash");
+	}
 
 	for(const std::string& type : avaibleDataStructures){
 	
@@ -380,6 +432,9 @@ void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 	}
 	if(rTree){
 		avaibleDataStructures.push_back("r-tree");	
+	}
+	if(!geohash.empty()){
+		avaibleDataStructures.push_back("geohash");
 	}
 
 	for(const std::string& type : avaibleDataStructures){
