@@ -442,12 +442,11 @@ void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 		avaibleDataStructures.push_back("geohash");
 	}
 
-	std::vector<geos::geom::Envelope> envelopes;
+	std::vector<geos::geom::Envelope> envelopes(iterations);
 
 	for(size_t i=0; i<iterations; i++){
 
 		int idx = randInt(1, 3);
-		out<<"evelope idx = "<<idx<<std::endl;
 
 		double width = envelopeSize[idx].first;
 		double height = envelopeSize[idx].second;
