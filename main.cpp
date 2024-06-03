@@ -22,6 +22,12 @@ extern "C"{
 
 const std::size_t geohashPrecision = 9;
 
+std::pair<double, double> envelopeSize[] = {
+	{0.0066733087850, 0.004275088},
+	{0.0204370081538, 0.010114234},
+	{0.0306555122308, 0.01167829}
+};
+
 std::vector<std::shared_ptr<geos::geom::Geometry>> geometries;
 double minX, minY, maxX, maxY;
 
@@ -135,27 +141,28 @@ std::string commonPrefix(const std::string& str1, const std::string& str2) {
     return str1.substr(0, i);
 }
 
+int randInt(const int a, const int b){
+		std::default_random_engine rnd{std::random_device{}()};
+		std::uniform_int_distribution<int> dist(a, b);
+		return dist(rnd);
+}
+
+double randDouble(const double a, const double b){
+		std::default_random_engine rnd{std::random_device{}()};
+		std::uniform_real_distribution<double> dist(a, b);
+		return dist(rnd);
+}
+
 bool isValidType(const std::string& type){
 	return (type == "kd-tree" ||type == "quad-tree" || type == "r-tree" || type == "geohash");
 }
 
-geos::geom::Envelope create_random_envelope(const double x1, const double y1, const double x2, const double y2){
+geos::geom::Envelope create_random_envelope(const double x1, const double y1, const double x2, const double y2, const double width, const double height){
 	
-	std::default_random_engine rnd{std::random_device{}()};
+	double random_x = randDouble(x1, x2); 
+	double random_y = randDouble(y1, y2);
 
-	std::uniform_real_distribution<double> dist1(x1, x2);
-	double random_x1 = dist1(rnd); 
-
-	std::uniform_real_distribution<double> dist2(y1, y2);
-	double random_y1 = dist2(rnd);
-
-	std::uniform_real_distribution<double> dist3(random_x1, x2);
-	double random_x2 = dist3(rnd);
-
-	std::uniform_real_distribution<double> dist4(random_y1, y2);
-	double random_y2 = dist4(rnd);
-
-	return geos::geom::Envelope(random_x1, random_x2, random_y1, random_y2);
+	return geos::geom::Envelope(random_x, random_x + width, random_y, random_y + height);
 }
 
 void cmd_view(std::ostream& out, const std::string& shapefilePath){
@@ -374,7 +381,13 @@ void cmd_search_range_random(std::ostream& out, const std::string& type){
 		return;
 	}
 
-	geos::geom::Envelope envelope = create_random_envelope(minX, minY, maxX, maxY);
+	int idx = randInt(1, 3);
+	out<<"evelope idx = "<<idx<<std::endl;
+
+	double width = envelopeSize[idx].first;
+	double height = envelopeSize[idx].second;
+
+	geos::geom::Envelope envelope = create_random_envelope(minX, minY, maxX - width, maxY - height, width, height);
 	std::vector<size_t> geometriesFound;
 
 	std::chrono::duration<double, std::milli> duration;
@@ -437,6 +450,19 @@ void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 		avaibleDataStructures.push_back("geohash");
 	}
 
+	std::vector<geos::geom::Envelope> envelopes;
+
+	for(size_t i=0; i<iterations; i++){
+
+		int idx = randInt(1, 3);
+		out<<"evelope idx = "<<idx<<std::endl;
+
+		double width = envelopeSize[idx].first;
+		double height = envelopeSize[idx].second;
+
+		envelopes[i] = create_random_envelope(minX, minY, maxX - width, maxY - height, width, height);
+	}
+
 	for(const std::string& type : avaibleDataStructures){
 	
 		out<<std::string(20, '-')<<type<<std::string(20, '-')<<std::endl;
@@ -447,10 +473,9 @@ void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 
 		for(size_t i=0; i<iterations; i++){
 			
-			geos::geom::Envelope envelope = create_random_envelope(minX, minY, maxX, maxY);
 			std::vector<size_t> geometriesFound;
 
-			search(type, envelope, geometriesFound);
+			search(type, envelopes[i], geometriesFound);
 			totalGeometriesFound += geometriesFound.size();
 		}
 
