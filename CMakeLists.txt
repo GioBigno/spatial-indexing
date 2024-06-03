@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(giorgio VERSION 1.0)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -18,7 +18,7 @@ find_package(GEOS REQUIRED 3.13.0)
 find_package(shapelib REQUIRED)
 find_package(cli REQUIRED)
 
-add_executable(giorgio main.cpp utils/src/shpformat.cpp utils/src/shpreader.cpp utils/src/geohash.c)
+add_executable(giorgio main.cpp utils/src/shpformat.cpp utils/src/shpreader.cpp utils/src/geohash.cpp)
 
 target_link_libraries(giorgio 
 	PRIVATE GEOS::geos 

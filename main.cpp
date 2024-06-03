@@ -15,10 +15,7 @@
 #include <random>
 #include <limits>
 #include "utils/headers/shpreader.h"
-
-extern "C"{
-	#include "utils/headers/geohash.h"
-}
+#include "utils/headers/geohash.h"
 
 const std::size_t geohashPrecision = 9;
 
@@ -238,11 +235,8 @@ bool build(const std::string& type){
 				return false; 
 			}
 			geos::geom::Coordinate coord(*std::static_pointer_cast<geos::geom::Point>(geometries[i])->getCoordinate());
-			geohash.push_back({geohash_encode(coord.y, coord.x, geohashPrecision), i});	
+			geohash.push_back({GeoHash::encode(coord.y, coord.x, geohashPrecision), i});
 		}
-
-		std::cout<<"geohash size: "<<geohash.size()<<std::endl;
-
 	}
 
 	return true;
@@ -323,19 +317,17 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 			return false;
 		}
 
-		std::string hash1 = geohash_encode(envelope.getMinY(), envelope.getMinX(), geohashPrecision);
-		std::string hash2 = geohash_encode(envelope.getMaxY(), envelope.getMaxX(), geohashPrecision);
+		const GeoHash::Point center = {envelope.getMinY() + (envelope.getHeight()/2), 
+									   envelope.getMinX() + (envelope.getWidth()/2)};
+		
+		const double radius = sqrt(envelope.getWidth()*envelope.getWidth() +
+								   envelope.getHeight()*envelope.getHeight()) / 2;
 
-		std::string hashPrefix = commonPrefix(hash1, hash2);
+		auto const cells = GeoHash::nearbyCells(center, radius, GeoHash::EARTH_METERS);
+	
+		for(const auto& cell : cells){
+		
 
-		std::cout<<"hash1 = encode "<<envelope.getMinY()<<",  "<<envelope.getMinX()<<" = "<<hash1<<std::endl;
-		std::cout<<"hash2 = "<<hash2<<std::endl;
-		std::cout<<"hasPrefix: "<<hashPrefix<<std::endl;
-
-		for(const auto& elem : geohash){
-			if(elem.first.find(hashPrefix) == 0){
-				geometriesFound.push_back(elem.second);
-			}
 		}
 	}
 
