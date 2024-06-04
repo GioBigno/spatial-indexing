@@ -11,6 +11,8 @@
 #include <cli/loopscheduler.h>
 #include <index/kdtree/KdNode.h>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 #include <memory>
 #include <random>
 #include <limits>
@@ -19,10 +21,10 @@
 
 const std::size_t geohashPrecision = 9;
 
-std::pair<double, double> envelopeSize[] = {
-	{0.0066733087850, 0.004275088},
-	{0.0204370081538, 0.010114234},
-	{0.0306555122308, 0.01167829}
+std::vector<std::pair<double, double>> envelopeSize{
+    {0.0066733087850, 0.004275088},
+    {0.0204370081538, 0.010114234},
+    {0.0306555122308, 0.01167829}
 };
 
 std::vector<std::shared_ptr<geos::geom::Geometry>> geometries;
@@ -49,56 +51,69 @@ int main() {
 	rootMenu->Insert(
         "view",
 		{"input"},
-		[](std::ostream& out, const std::string& shapefilePath){cmd_view(out, shapefilePath);},
+        [](std::ostream& out, const std::string& shapefilePath){
+            cmd_view(out, shapefilePath);
+        },
         "--input [file.shp]"
         );
 
     rootMenu->Insert(
         "load",
 		{"input"},
-		[](std::ostream& out, const std::string& inputFile){cmd_load(out, inputFile);},
+        [](std::ostream& out, const std::string& inputFile){
+            cmd_load(out, inputFile);
+        },
         "--input [file.shp]"
         );
 
     rootMenu->Insert(
         "build",
 		{"type"},
-		[](std::ostream& out, const std::string& type){cmd_build(out, type);},
+        [](std::ostream& out, const std::string& type){
+            cmd_build(out, type);
+        },
         "--type [kd-tree|quad-tree|r-tree|geohash]"
         );
 
 	rootMenu->Insert(
         "search_range",
 		{"type", "envelope"},
-		[](std::ostream& out, const std::string& type, const double x1, const double y1, const double x2, const double y2){cmd_search_range_xy(out, type, x1, y1, x2, y2);},
+        [](std::ostream& out, const std::string& type, const double x1, const double y1, const double x2, const double y2){
+            cmd_search_range_xy(out, type, x1, y1, x2, y2);
+        },
         "--type [kd-tree|quad-tree|r-tree|geohash] --x1 --y1 --x2 --y2"
         );
     
 	rootMenu->Insert(
         "search_range",
 		{"type"},
-		[](std::ostream& out, const std::string& type){cmd_search_range_random(out, type);},
+        [](std::ostream& out, const std::string& type){
+            cmd_search_range_random(out, type);
+        },
         "--type [kd-tree|quad-tree|r-tree|geohash]"
         );
 	
 	rootMenu->Insert(
         "compare",
 		{"iterations"},
-		[](std::ostream& out, const std::size_t iterations){cmd_compare_random(out, iterations);},
+        [](std::ostream& out, const std::size_t iterations){
+            cmd_compare_random(out, iterations);
+        },
         "--iterations"
-        );
-	
-	rootMenu->Insert(
+    );
+
+    rootMenu->Insert(
         "compare",
-		{"envelope"},
-		[](std::ostream& out, const double x1, const double y1, const double x2, const double y2){cmd_compare_xy(out, x1, y1, x2, y2);},
+        {"envelope"},
+        [](std::ostream& out, const double x1, const double y1, const double x2, const double y2){
+            cmd_compare_xy(out, x1, y1, x2, y2);
+        },
         "--x1 --y1 --x2 --y2"
         );
 	
 	cli::Cli cli( std::move(rootMenu), std::make_unique<cli::FileHistoryStorage>(".cli") );
     cli.StdExceptionHandler(
-        [](std::ostream& out, const std::string& cmd, const std::exception& e)
-        {
+        [](std::ostream& out, const std::string& cmd, const std::exception& e){
             out << "Exception caught in cli handler: " << e.what()
                 << " handling command: " << cmd << ".\n";
         }
@@ -109,8 +124,7 @@ int main() {
 	cli::LoopScheduler scheduler;
 	cli::CliLocalTerminalSession localSession(cli, scheduler, std::cout);
     localSession.ExitAction(
-        [&scheduler](std::ostream& out)
-        {
+        [&scheduler](std::ostream& out){
             out << "bye\n";
             scheduler.Stop();
         }
@@ -176,10 +190,10 @@ void cmd_load(std::ostream& out, const std::string& inputFile){
     maxX = std::numeric_limits<double>::lowest();
     maxY = std::numeric_limits<double>::lowest();
 
-    for (const auto& geom : geometries) {
-        if (geom) {
+    for(const auto& geom : geometries){
+        if(geom){
             const geos::geom::Envelope* envelope = geom->getEnvelopeInternal();
-            if (envelope) {
+            if(envelope){
                 if (envelope->getMinX() < minX) minX = envelope->getMinX();
                 if (envelope->getMinY() < minY) minY = envelope->getMinY();
                 if (envelope->getMaxX() > maxX) maxX = envelope->getMaxX();
@@ -191,6 +205,7 @@ void cmd_load(std::ostream& out, const std::string& inputFile){
 	kdTree.reset();
 	quadTree.reset();
 	rTree.reset();
+    geohash.clear();
 }
 
 bool build(const std::string& type){
@@ -287,6 +302,7 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 		for(geos::index::kdtree::KdNode* node : result){
 			geometriesFound.push_back(reinterpret_cast<std::size_t>(node->getData()));
 		}
+
 	}else if(type == "quad-tree"){
 		
 		if(!quadTree){
@@ -300,6 +316,7 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 		for(const void* ptr : result){
 			geometriesFound.push_back(reinterpret_cast<std::size_t>(ptr));
 		}
+
 	}else if(type == "r-tree"){
 		
 		if(!rTree){
@@ -313,6 +330,7 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 		for(const void* ptr : result){
 			geometriesFound.push_back(reinterpret_cast<std::size_t>(ptr));
 		}
+
 	}else if(type == "geohash"){
 		
 		if(geohash.empty()){
@@ -322,7 +340,7 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 		const GeoHash::Point center = {envelope.getMinY() + (envelope.getHeight()/2), 
 									   envelope.getMinX() + (envelope.getWidth()/2)};
 	
-		const double radius = GeoHash::distance(envelope.getMinY(), envelope.getMinX(), envelope.getMaxY(), envelope.getMaxX(), GeoHash::EARTH_METERS);	
+        const double radius = GeoHash::distance(envelope.getMinY(), envelope.getMinX(), envelope.getMaxY(), envelope.getMaxX(), GeoHash::EARTH_METERS)*2;
 
 		auto const cells = GeoHash::nearbyCells(center, radius, GeoHash::EARTH_METERS);
 	
@@ -337,14 +355,20 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 			auto it = std::lower_bound(geohash.begin(), geohash.end(), cellHash, compare);
     		while (it != geohash.end() && it->first.find(cellHash) == 0){
 
-				if(cellHash.size() <= it->first.size() && envelope.contains(*(geometries[it->second]->getCoordinate()))){
+                //if(cellHash.size() <= it->first.size()){
 					geometriesFound.push_back(it->second);
-				}
+                //}
 
         		++it;
     		}
 		}
 	}
+
+	auto cond = [envelope](const std::size_t& geomIdx){
+        return !envelope.contains(geometries[geomIdx]->getEnvelopeInternal());
+	};
+
+    std::erase_if(geometriesFound, cond);
 
 	return true;
 }
@@ -381,8 +405,7 @@ void cmd_search_range_random(std::ostream& out, const std::string& type){
 		return;
 	}
 
-	int idx = randInt(1, 3);
-	out<<"evelope idx = "<<idx<<std::endl;
+    int idx = randInt(0, envelopeSize.size()-1);
 
 	double width = envelopeSize[idx].first;
 	double height = envelopeSize[idx].second;
@@ -454,7 +477,7 @@ void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 
 	for(size_t i=0; i<iterations; i++){
 
-		int idx = randInt(1, 3);
+        int idx = randInt(0, envelopeSize.size()-1);
 
 		double width = envelopeSize[idx].first;
 		double height = envelopeSize[idx].second;
@@ -501,45 +524,33 @@ bool readShapeFile(const std::string& fileName, std::vector<std::shared_ptr<geos
 		return false;
 	}
 
-	geos::geom::Geometry* geomRead;
+    geos::geom::Geometry* currGeom;
 
     while(reader.next()){
-
-        std::unique_ptr<geos::geom::Geometry> currentGeom(nullptr);
 
         switch(reader.getGeomType()){
 
         case bpp::gPoint:
-			geomRead = reader.readPoint();
-			if(geomRead){
-            	currentGeom = std::move(geomRead->clone());
-			}
+            currGeom = reader.readPoint();
             break;
         case bpp::gMultiPoint:
-			geomRead = reader.readMultiPoint();
-			if(geomRead){
-            	currentGeom = std::move(geomRead->clone());
-			}
+            currGeom = reader.readMultiPoint();
             break;
         case bpp::gLine:
-			geomRead = reader.readLineString();
-			if(geomRead){
-            	currentGeom = std::move(geomRead->clone());
-			}
+            currGeom = reader.readLineString();
             break;
         case bpp::gPolygon:
-			geomRead = reader.readMultiPolygon();
-			if(geomRead){
-            	currentGeom = std::move(geomRead->clone());
-			}
+            currGeom = reader.readMultiPolygon();
 			break;
         case bpp::gUnknown:
 			std::cout << "[shpReader]: geometry unknow";
+            currGeom = nullptr;
             break;
         }
 
-        if(currentGeom)
-            geometries.push_back(std::move(currentGeom));
+        if(currGeom){
+            geometries.push_back(std::move(currGeom->clone()));
+        }
     }
 
 	return true;
