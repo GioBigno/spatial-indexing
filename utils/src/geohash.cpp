@@ -199,7 +199,7 @@ namespace GeoHash {
 	}
 
 	HashVector nearbyCells(double lat, double lon, double radius, GeoSphere const &sphere){
-		constexpr bool ENABLE_OPTIMIZATIONS = 1;
+        constexpr bool ENABLE_OPTIMIZATIONS = 1;
 
 		HashVector v;
 
