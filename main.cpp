@@ -131,13 +131,6 @@ std::string time_to_string(const double time){
 	return oss.str();
 }
 
-std::string commonPrefix(const std::string& str1, const std::string& str2) {
-    std::size_t minLength = std::min(str1.size(), str2.size());
-    std::size_t i = 0;
-    for(;i < minLength && str1[i] == str2[i]; i++);
-    return str1.substr(0, i);
-}
-
 int randInt(const int a, const int b){
 		std::default_random_engine rnd{std::random_device{}()};
 		std::uniform_int_distribution<int> dist(a, b);
@@ -244,6 +237,8 @@ bool build(const std::string& type){
 			geos::geom::Coordinate coord(*std::static_pointer_cast<geos::geom::Point>(geometries[i])->getCoordinate());
 			geohash.push_back({GeoHash::encode(coord.y, coord.x, geohashPrecision), i});
 		}
+
+		std::sort(geohash.begin(), geohash.end());
 	}
 
 	return true;
@@ -326,15 +321,28 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
 
 		const GeoHash::Point center = {envelope.getMinY() + (envelope.getHeight()/2), 
 									   envelope.getMinX() + (envelope.getWidth()/2)};
-		
-		const double radius = sqrt(envelope.getWidth()*envelope.getWidth() +
-								   envelope.getHeight()*envelope.getHeight()) / 2;
+	
+		const double radius = GeoHash::distance(envelope.getMinY(), envelope.getMinX(), envelope.getMaxY(), envelope.getMaxX(), GeoHash::EARTH_METERS);	
 
 		auto const cells = GeoHash::nearbyCells(center, radius, GeoHash::EARTH_METERS);
 	
 		for(const auto& cell : cells){
-		
 
+			const std::string cellHash = cell.data();
+
+			auto compare = [](const std::pair<std::string, std::size_t>& pair, const std::string& str){
+       			return pair.first < str;
+    		};
+
+			auto it = std::lower_bound(geohash.begin(), geohash.end(), cellHash, compare);
+    		while (it != geohash.end() && it->first.find(cellHash) == 0){
+
+				if(cellHash.size() <= it->first.size() && envelope.contains(*(geometries[it->second]->getCoordinate()))){
+					geometriesFound.push_back(it->second);
+				}
+
+        		++it;
+    		}
 		}
 	}
 
