@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(giorgio VERSION 1.0)
+project(demo VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -18,19 +18,27 @@ find_package(GEOS REQUIRED 3.13.0)
 find_package(shapelib REQUIRED)
 find_package(cli REQUIRED)
 
-add_executable(giorgio main.cpp utils/src/shpformat.cpp utils/src/shpreader.cpp utils/src/geohash.cpp)
+add_executable(demo 
+	main.cpp 
+	utils/src/shpformat.cpp 
+	utils/src/shpreader.cpp 
+	utils/src/geohash.cpp
+)
 
-target_link_libraries(giorgio 
+target_link_libraries(demo
 	PRIVATE GEOS::geos 
 	PRIVATE ${shapelib_LIBRARIES}
 	PRIVATE cli::cli
 )
 
-target_include_directories(giorgio PRIVATE ${GEOS_INCLUDE_DIRS} utils)
+target_include_directories(demo PRIVATE 
+	${GEOS_INCLUDE_DIRS} 
+	utils
+)
 
 # Move compile_commands.json to the project root
 add_custom_command(
-    TARGET giorgio POST_BUILD
+    TARGET demo POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_BINARY_DIR}/compile_commands.json
     ${CMAKE_SOURCE_DIR}/compile_commands.json
