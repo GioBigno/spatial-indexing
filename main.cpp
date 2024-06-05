@@ -81,7 +81,7 @@ int main() {
         [](std::ostream& out, const std::string& type, const double x1, const double y1, const double x2, const double y2){
             cmd_search_range_xy(out, type, x1, y1, x2, y2);
         },
-        "--type [kd-tree|quad-tree|r-tree|geohash] --x1 --y1 --x2 --y2"
+        "--type [kd-tree|quad-tree|r-tree|geohash|linear] --x1 --y1 --x2 --y2"
         );
     
 	rootMenu->Insert(
@@ -90,7 +90,7 @@ int main() {
         [](std::ostream& out, const std::string& type){
             cmd_search_range_random(out, type);
         },
-        "--type [kd-tree|quad-tree|r-tree|geohash]"
+        "--type [kd-tree|quad-tree|r-tree|geohash|linear]"
         );
 	
 	rootMenu->Insert(
@@ -158,7 +158,7 @@ double randDouble(const double a, const double b){
 }
 
 bool isValidType(const std::string& type){
-	return (type == "kd-tree" ||type == "quad-tree" || type == "r-tree" || type == "geohash");
+    return (type == "kd-tree" ||type == "quad-tree" || type == "r-tree" || type == "geohash" || type == "linear");
 }
 
 geos::geom::Envelope create_random_envelope(const double x1, const double y1, const double x2, const double y2, const double width, const double height){
@@ -289,6 +289,8 @@ void cmd_build(std::ostream& out, const std::string& type){
 
 bool search(const std::string& type, const geos::geom::Envelope& envelope, std::vector<std::size_t>& geometriesFound){
 
+    geometriesFound.clear();
+
 	if(type == "kd-tree"){
 
 		if(!kdTree){
@@ -362,7 +364,11 @@ bool search(const std::string& type, const geos::geom::Envelope& envelope, std::
         		++it;
     		}
 		}
-	}
+    }else if(type == "linear"){
+
+        geometriesFound.resize(geometries.size());
+        std::iota(geometriesFound.begin(), geometriesFound.end(), 0);
+    }
 
 	auto cond = [envelope](const std::size_t& geomIdx){
         return !envelope.contains(geometries[geomIdx]->getEnvelopeInternal());
@@ -431,7 +437,7 @@ void cmd_search_range_random(std::ostream& out, const std::string& type){
 
 void cmd_compare_xy(std::ostream& out, const double x1, const double y1, const double x2, const double y2){
 
-	std::vector<std::string> avaibleDataStructures;
+    std::vector<std::string> avaibleDataStructures {"linear"};
 
 	if(kdTree){
 		avaibleDataStructures.push_back("kd-tree");	
@@ -458,7 +464,7 @@ void cmd_compare_xy(std::ostream& out, const double x1, const double y1, const d
 
 void cmd_compare_random(std::ostream& out, const std::size_t iterations){
 
-	std::vector<std::string> avaibleDataStructures;
+    std::vector<std::string> avaibleDataStructures {"linear"};
 
 	if(kdTree){
 		avaibleDataStructures.push_back("kd-tree");	
