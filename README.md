@@ -21,9 +21,9 @@ cmake --build .
 If you have installed the dependency libraries in a non-standard path, you must specify the path before building with:
 
 ```
-cmake .. -DQT_PATH:PATH=<your_path_to_qt>
 cmake .. -DGEOS_PATH:PATH=<your_path_to_geos>
 cmake .. -DSHAPELIB_PATH:PATH=<your_path_to_shapelib>
+cmake .. -DCLI_PATH:PATH=<your_path_to_cli>
 ```
 
 ## Functionality
