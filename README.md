@@ -1,6 +1,6 @@
 ## Simple CLI Program for Comparing Spatial Indexing Methods
 
-I gave a talk at the Italian C++ Community where I explain how indices work, when they are useful, and the code I wrote.  
+I gave a talk at the Italian C++ Community where I explain how spatial indices work, when they are useful, and the code I wrote.  
 Link to the video on youtube: [link](https://www.youtube.com/watch?v=Cnjix7shv00&t=3111s&ab_channel=ItalianCppCommunity)
 
 ## How to Build
